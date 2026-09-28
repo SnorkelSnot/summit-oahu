@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply font-body text-lava-900 bg-sand-50;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-8 py-4 bg-palm-700 text-sand-50 font-body font-semibold text-sm tracking-wider uppercase rounded-sm transition-all duration-300 hover:bg-palm-800 hover:shadow-lg hover:shadow-palm-900/20 active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-8 py-4 border-2 border-sand-300 text-lava-800 font-body font-semibold text-sm tracking-wider uppercase rounded-sm transition-all duration-300 hover:border-gold-500 hover:text-gold-700 hover:shadow-lg;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-gold-500 to-gold-600 text-white font-body font-bold text-sm tracking-wider uppercase rounded-sm transition-all duration-300 hover:from-gold-600 hover:to-gold-700 hover:shadow-xl hover:shadow-gold-500/30 active:scale-[0.98];
+  }
+
+  .section-padding {
+    @apply px-6 py-20 md:px-12 lg:px-20 xl:px-32 md:py-28;
+  }
+
+  .heading-xl {
+    @apply font-display text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-normal leading-[1.15] tracking-wide;
+  }
+
+  .heading-lg {
+    @apply font-display text-2xl md:text-3xl lg:text-4xl font-normal leading-tight tracking-wide;
+  }
+
+  .heading-md {
+    @apply font-display text-xl md:text-2xl font-normal leading-snug tracking-wide;
+  }
+
+  .body-lg {
+    @apply font-body text-lg md:text-xl leading-relaxed text-lava-600;
+  }
+
+  .label-sm {
+    @apply font-body text-xs font-semibold tracking-[0.2em] uppercase text-gold-600;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Michroma ships a single weight — prevent ugly synthesized bold on the display font */
+.font-display,
+h1, h2, h3, h4 {
+  font-weight: 400 !important;
+  font-synthesis: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-sand-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-palm-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-palm-500;
+}
+
+/* Smooth image loading */
+img {
+  @apply transition-opacity duration-500;
+}
+
+/* Calendar custom styles */
+.calendar-day {
+  @apply w-10 h-10 flex items-center justify-center rounded-full text-sm transition-all duration-200 cursor-pointer;
+}
+.calendar-day:hover:not(.calendar-day--disabled) {
+  @apply bg-palm-100 text-palm-800;
+}
+.calendar-day--available {
+  @apply text-palm-700 font-semibold bg-palm-50;
+}
+.calendar-day--limited {
+  @apply text-gold-700 font-semibold bg-gold-50;
+}
+.calendar-day--booked {
+  @apply text-lava-400 line-through cursor-not-allowed;
+}
+.calendar-day--selected {
+  @apply bg-palm-700 text-white font-bold shadow-lg shadow-palm-700/30;
+}
+.calendar-day--disabled {
+  @apply text-lava-300 cursor-not-allowed;
+}
