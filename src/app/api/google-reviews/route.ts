@@ -42,7 +42,11 @@ async function details(key: string, id: string) {
     `https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`,
     { headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": DETAIL_FIELDS }, cache: "no-store" }
   );
-  return res.ok ? res.json() : null;
+  if (!res.ok) {
+    console.warn(`[google-reviews] Place Details ${id} failed: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+    return null;
+  }
+  return res.json();
 }
 
 // Must be OUR listing: website summitoahu.com, or named "Summit O'ahu" in any
@@ -70,11 +74,16 @@ async function findSummit(key: string) {
     }),
     cache: "no-store",
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.warn(`[google-reviews] Text Search failed: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+    return null;
+  }
   const ids: string[] = ((await res.json()).places || []).map((x: any) => x.id).filter(Boolean);
   // At most two detail lookups, so a bad search can't eat the daily quota.
+  if (!ids.length) console.warn("[google-reviews] Text Search returned no places.");
   for (const id of ids.slice(0, 2)) {
     const p = await details(key, id);
+    if (p) console.log(`[google-reviews] Candidate ${id}: "${p.displayName?.text}" ${p.websiteUri || "(no website)"}`);
     if (p && isSummit(p)) {
       console.log(`[google-reviews] Found Summit's Place ID: ${id} — set GOOGLE_PLACE_ID to this to skip the search.`);
       foundPlaceId = id;
@@ -87,7 +96,10 @@ async function findSummit(key: string) {
 
 export async function GET() {
   const key = process.env.GOOGLE_PLACES_API_KEY;
-  if (!key) return new NextResponse(null, { status: 204 });
+  if (!key) {
+    console.warn("[google-reviews] GOOGLE_PLACES_API_KEY is not set in this deploy.");
+    return new NextResponse(null, { status: 204 });
+  }
   const placeId = process.env.GOOGLE_PLACE_ID || foundPlaceId;
 
   try {
@@ -115,7 +127,8 @@ export async function GET() {
       },
       { headers: { "Cache-Control": "no-store" } }
     );
-  } catch {
+  } catch (e: any) {
+    console.warn(`[google-reviews] Error: ${e?.message || e}`);
     return new NextResponse(null, { status: 204 });
   }
 }
