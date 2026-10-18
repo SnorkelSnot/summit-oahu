@@ -80,6 +80,10 @@ async function findSummit(key: string) {
       },
       body: JSON.stringify({
         textQuery,
+        // Summit has no public street address (a "pure service-area business").
+        // Text Search LEAVES THOSE OUT unless this is true (default false) —
+        // why every search found the Kuliouou Summit trail instead (Oct 17, 2026).
+        includePureServiceAreaBusinesses: true,
         locationBias: {
           circle: { center: { latitude: 21.3, longitude: -157.82 }, radius: 30000 },
         },
