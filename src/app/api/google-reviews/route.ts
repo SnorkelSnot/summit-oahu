@@ -49,48 +49,58 @@ async function details(key: string, id: string) {
   return res.json();
 }
 
-// Must be OUR listing: website summitoahu.com, or named "Summit O'ahu" in any
-// spelling (Oahu / O'ahu / Oʻahu / O‘ahu). "Summit" alone is not enough — a
-// test with a fake "Summit Steakhouse" result proved that (Oct 2026).
+// Summit's Google Maps CID, decoded from the review link g.page/r/CUWNj1mOJo0SEAE
+// (Oct 17, 2026). Every listing's googleMapsUri ends "?cid=<this number>", so it
+// identifies OUR listing exactly, whatever the name or search ranking.
+const SUMMIT_CID = "1336767057228696901";
+
+// Must be OUR listing: the CID above, website summitoahu.com, or named
+// "Summit O'ahu" in any spelling. "Summit" alone is not enough — a test with a
+// fake "Summit Steakhouse" result proved that (Oct 2026).
 const isSummit = (p: any) =>
+  new RegExp(`cid=${SUMMIT_CID}\\b`).test(p?.googleMapsUri || "") ||
   /summitoahu\.com/i.test(p?.websiteUri || "") ||
   /\bsummit\s+o\s*[ʻ'‘’`]?\s*ahu\b/i.test(p?.displayName?.text || "");
 
-/** Find Summit's listing by name. IDs-only Text Search is a free SKU. */
+// Text Search with name/website/maps-link fields (Text Search Pro SKU, inside
+// Google's monthly free allowance). Several phrasings, stopping at the first
+// hit, because the first try ("Summit Oahu tours Honolulu") ranked other
+// companies above Summit (Oct 17, 2026). Only runs until GOOGLE_PLACE_ID is set.
+const QUERIES = ["Summit Oʻahu", "Summit O'ahu", "Summit Oahu", "Summit Oahu tours"];
+
+/** Find Summit's listing by name, then fetch its details once. */
 async function findSummit(key: string) {
-  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": key,
-      "X-Goog-FieldMask": "places.id",
-    },
-    body: JSON.stringify({
-      textQuery: "Summit Oahu tours Honolulu",
-      locationBias: {
-        circle: { center: { latitude: 21.3, longitude: -157.82 }, radius: 30000 },
+  for (const textQuery of QUERIES) {
+    const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.websiteUri,places.googleMapsUri",
       },
-      pageSize: 3,
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    console.warn(`[google-reviews] Text Search failed: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
-    return null;
-  }
-  const ids: string[] = ((await res.json()).places || []).map((x: any) => x.id).filter(Boolean);
-  // At most two detail lookups, so a bad search can't eat the daily quota.
-  if (!ids.length) console.warn("[google-reviews] Text Search returned no places.");
-  for (const id of ids.slice(0, 2)) {
-    const p = await details(key, id);
-    if (p) console.log(`[google-reviews] Candidate ${id}: "${p.displayName?.text}" ${p.websiteUri || "(no website)"}`);
-    if (p && isSummit(p)) {
-      console.log(`[google-reviews] Found Summit's Place ID: ${id} — set GOOGLE_PLACE_ID to this to skip the search.`);
-      foundPlaceId = id;
-      return p;
+      body: JSON.stringify({
+        textQuery,
+        locationBias: {
+          circle: { center: { latitude: 21.3, longitude: -157.82 }, radius: 30000 },
+        },
+        pageSize: 10,
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn(`[google-reviews] Text Search "${textQuery}" failed: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+      continue;
+    }
+    const places: any[] = (await res.json()).places || [];
+    console.log(`[google-reviews] "${textQuery}" -> ${places.map((x) => `${x.displayName?.text} [${x.googleMapsUri || "?"}]`).join(" | ") || "no places"}`);
+    const hit = places.find(isSummit);
+    if (hit?.id) {
+      console.log(`[google-reviews] Found Summit's Place ID: ${hit.id} — set GOOGLE_PLACE_ID to this to skip the search.`);
+      foundPlaceId = hit.id;
+      return details(key, hit.id);
     }
   }
-  console.warn("[google-reviews] Text Search did not return Summit's listing.");
+  console.warn("[google-reviews] No search returned Summit's listing.");
   return null;
 }
 
