@@ -2,6 +2,22 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import Link from "next/link";
+import { stripe } from "@/lib/stripe";
+
+/**
+ * Show the guest WHERE the confirmation went (Oct 28, 2026), so a typo like
+ * "gmail.con" is spotted on this page instead of the day before the tour.
+ * Read server-side from the Stripe session; the page works the same without it.
+ */
+async function bookedEmail(sessionId?: string): Promise<string> {
+  if (!sessionId || !/^cs_(live|test)_[A-Za-z0-9]+$/.test(sessionId)) return "";
+  try {
+    const s = await stripe.checkout.sessions.retrieve(sessionId);
+    return (s.metadata?.email || s.customer_details?.email || "").trim();
+  } catch {
+    return "";
+  }
+}
 
 export const metadata = {
   title: "Big Mahalo!",
@@ -21,12 +37,13 @@ const previewImages = [
   { src: "/images/stop-haleiwa.jpg", alt: "Historic Hale'iwa town on the North Shore" },
 ];
 
-export default function ThankYouPage({
+export default async function ThankYouPage({
   searchParams,
 }: {
-  searchParams?: { lang?: string };
+  searchParams?: { lang?: string; session_id?: string };
 }) {
   const isTurkish = searchParams?.lang === "tr";
+  const sentTo = await bookedEmail(searchParams?.session_id);
   return (
     <main className="min-h-screen bg-sand-50">
       <Navbar />
@@ -90,6 +107,16 @@ export default function ThankYouPage({
                   booking details and receipt. Check your spam folder if you
                   don&apos;t see it within a few minutes.
                 </p>
+                {sentTo && (
+                  <p className="text-sm mt-2 text-palm-800">
+                    Sent to <strong className="break-all">{sentTo}</strong>. Not
+                    right? Call or text{" "}
+                    <a href="tel:+18082034103" className="underline whitespace-nowrap">808.203.4103</a>{" "}
+                    or email{" "}
+                    <a href="mailto:summitoahu@gmail.com" className="underline">summitoahu@gmail.com</a>{" "}
+                    and we&apos;ll fix it.
+                  </p>
+                )}
               </div>
             </div>
 
