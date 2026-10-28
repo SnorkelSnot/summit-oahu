@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" fill="none">
+  <!-- Summit O'ahu Logo Concept 3: Minimal / Luxury - Gold accent mark -->
+
+  <!-- Geometric mountain mark -->
+  <g transform="translate(20, 15)">
+    <!-- Stylized peak as a single elegant triangle -->
+    <path d="M35 80 L35 15 L70 80 Z" fill="none" stroke="#c48d48" stroke-width="2.5"/>
+
+    <!-- Inner detail - ridge line -->
+    <path d="M35 15 L50 50 L60 40" stroke="#2d4d22" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+    <!-- Small circle - sun/summit -->
+    <circle cx="35" cy="10" r="3" fill="#c48d48"/>
+  </g>
+
+  <!-- Text - elegant spacing -->
+  <text x="115" y="48" font-family="Georgia, 'Playfair Display', serif" font-size="36" font-weight="700" fill="#1a3a1a" letter-spacing="3">SUMMIT</text>
+
+  <!-- Decorative divider -->
+  <line x1="115" y1="58" x2="175" y2="58" stroke="#c48d48" stroke-width="1.5"/>
+  <circle cx="180" cy="58" r="2" fill="#c48d48"/>
+  <line x1="185" y1="58" x2="360" y2="58" stroke="#c48d48" stroke-width="1.5"/>
+
+  <text x="115" y="80" font-family="Georgia, 'Playfair Display', serif" font-size="28" font-weight="300" fill="#c48d48" letter-spacing="8" font-style="italic">O ' A H U</text>
+
+  <!-- Tagline -->
+  <text x="115" y="100" font-family="'Inter', Helvetica, sans-serif" font-size="7.5" font-weight="600" fill="#8a827d" letter-spacing="5">PREMIUM ISLAND EXPERIENCES</text>
+</svg>
