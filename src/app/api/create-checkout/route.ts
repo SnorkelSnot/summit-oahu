@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { phoneLooksValid } from "@/lib/phone";
+import { domainAcceptsMail } from "@/lib/emailDomain";
 import { stripe, calculatePrice, type BookingDetails } from "@/lib/stripe";
 import { checkAvailability } from "@/lib/availability";
 import { isPrivateOnlyHotel } from "@/lib/hotels";
@@ -128,6 +129,16 @@ export async function POST(request: NextRequest) {
     if (!tourType || !date || !name || !email || !phone || !hotel) {
       return NextResponse.json(
         { error: "Please fill in all required fields." },
+        { status: 400 }
+      );
+    }
+
+    // Email domain must accept mail (Oct 28, 2026 — a "gmail.con" confirmation
+    // vanished without even bouncing). Only a definite "no" blocks; if DNS
+    // can't answer, the booking goes ahead.
+    if ((await domainAcceptsMail(String(email))) === false) {
+      return NextResponse.json(
+        { error: "That email address can't receive mail — please check the part after the @." },
         { status: 400 }
       );
     }

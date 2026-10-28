@@ -20,6 +20,7 @@ import {
   isSeatTour,
 } from "@/lib/tours";
 import { DIAL_CODES, dialFor, joinPhone, phoneLooksValid } from "@/lib/phone";
+import { suggestEmail } from "@/lib/emailCheck";
 
 type FormData = {
   tourType: TourType;
@@ -70,6 +71,29 @@ export default function BookingForm() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  // Email typo catcher (Oct 28, 2026): the address the guest said "is correct"
+  // is remembered so the suggestion never nags twice for the same entry.
+  const [emailConfirmed, setEmailConfirmed] = useState("");
+  const emailSuggestion = suggestEmail(form.email);
+  const emailNeedsCheck = !!emailSuggestion && emailConfirmed !== form.email.trim();
+  // Does the domain accept mail at all? Asked on blur and again before paying.
+  // Only a definite "no" (false) blocks; "couldn't tell" (null) never does.
+  const [domainCheck, setDomainCheck] = useState<{ email: string; ok: boolean | null } | null>(null);
+  async function checkDomain(email: string): Promise<boolean | null> {
+    const e = email.trim();
+    if (!/@.+\./.test(e)) return null;
+    if (domainCheck && domainCheck.email === e) return domainCheck.ok;
+    try {
+      const res = await fetch(`/api/check-email?email=${encodeURIComponent(e)}`, { cache: "no-store" });
+      const data = await res.json();
+      const ok = data.ok === true ? true : data.ok === false ? false : null;
+      setDomainCheck({ email: e, ok });
+      return ok;
+    } catch {
+      return null;
+    }
+  }
+  const domainBad = !!domainCheck && domainCheck.email === form.email.trim() && domainCheck.ok === false;
   const [error, setError] = useState<string | null>(null);
   const [vanConflict, setVanConflict] = useState(false);
   const [waiver, setWaiver] = useState<{
@@ -161,6 +185,24 @@ export default function BookingForm() {
 
     try {
       const hotel = showCustomHotel ? form.customHotel : form.hotel;
+      if (emailNeedsCheck) {
+        setError(
+          isTurkish
+            ? "Lütfen e-posta adresinizi kontrol edin (yukarıdaki öneriye bakın). — Please check your email address (see the suggestion above)."
+            : "Please check your email address — see the suggestion under the email box."
+        );
+        setSubmitting(false);
+        return;
+      }
+      if ((await checkDomain(form.email)) === false) {
+        setError(
+          isTurkish
+            ? "Bu e-posta adresi posta alamıyor — lütfen @ işaretinden sonraki kısmı kontrol edin. — That email address can't receive mail; please check the part after the @."
+            : "That email address can't receive mail — please check the part after the @."
+        );
+        setSubmitting(false);
+        return;
+      }
       const phone = joinPhone(dialFor(form.phoneDial), form.phone);
       if (!phoneLooksValid(phone)) {
         setError(
@@ -529,8 +571,35 @@ export default function BookingForm() {
             <label className="block text-sm font-semibold text-palm-800 mb-1.5">{L("E-posta", "Email")} *</label>
             <input type="email" required value={form.email}
               onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              onBlur={(e) => { if (!suggestEmail(e.target.value)) checkDomain(e.target.value); }}
               className="w-full px-4 py-3 rounded-lg border border-sand-300 focus:border-palm-500 focus:ring-2 focus:ring-palm-500/20 outline-none transition-all text-sm"
               placeholder="john@example.com" />
+            {domainBad && !emailNeedsCheck && (
+              <div className="mt-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-800">
+                {L(
+                  "Bu adres e-posta alamıyor görünüyor — lütfen @ işaretinden sonrasını kontrol edin.",
+                  `We can't find an email server for "${form.email.trim().split("@").pop()}" — please check the part after the @.`
+                )}
+              </div>
+            )}
+            {emailNeedsCheck && (
+              <div className="mt-2 rounded-lg bg-gold-50 border border-gold-200 px-3 py-2 text-sm text-gold-900">
+                {L("Bunu mu demek istediniz:", "Did you mean")}{" "}
+                <strong className="break-all">{emailSuggestion}</strong>?
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, email: emailSuggestion }))}
+                    className="rounded-full bg-palm-700 text-white px-3 py-1 text-xs font-semibold hover:bg-palm-800">
+                    {L("Evet, düzelt", "Yes, fix it")}
+                  </button>
+                  <button type="button"
+                    onClick={() => setEmailConfirmed(form.email.trim())}
+                    className="rounded-full border border-gold-300 px-3 py-1 text-xs font-semibold text-gold-900 hover:bg-gold-100">
+                    {L("Hayır, doğru", "No, mine is correct")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-semibold text-palm-800 mb-1.5">{L("Telefon", "Phone")} *</label>
