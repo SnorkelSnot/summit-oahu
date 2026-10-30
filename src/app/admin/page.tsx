@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import PhoneActions from "@/components/admin/PhoneActions";
 
 type DayData = {
   date: string;
@@ -402,8 +403,16 @@ export default function AdminPage() {
                                 <div className="text-lava-500">
                                   {booking.hotel}
                                 </div>
-                                <div className="text-lava-400">
-                                  {booking.email} · {booking.phone}
+                                <div className="text-lava-400 break-all">
+                                  {booking.email ? (
+                                    <a href={`mailto:${booking.email}`} className="underline decoration-dotted underline-offset-2">
+                                      {booking.email}
+                                    </a>
+                                  ) : null}
+                                </div>
+                                {/* Tap for Text / WhatsApp / Call / Copy (Oct 29, 2026) */}
+                                <div className="mt-1">
+                                  <PhoneActions phone={booking.phone} name={booking.name} />
                                 </div>
                                 {booking.conciergeRef && (
                                   <div className="text-gold-600 mt-1">
