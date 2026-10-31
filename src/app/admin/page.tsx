@@ -412,7 +412,7 @@ export default function AdminPage() {
                                 </div>
                                 {/* Tap for Text / WhatsApp / Call / Copy (Oct 29, 2026) */}
                                 <div className="mt-1">
-                                  <PhoneActions phone={booking.phone} name={booking.name} />
+                                  <PhoneActions phone={booking.phone} name={booking.name} hotel={booking.hotel} />
                                 </div>
                                 {booking.conciergeRef && (
                                   <div className="text-gold-600 mt-1">
