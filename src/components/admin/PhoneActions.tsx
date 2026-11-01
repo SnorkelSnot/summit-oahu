@@ -35,13 +35,15 @@ function nightBeforeMessage(guide: Guide, first: string, hotel: string, time: st
   const t = time.trim() || "[time]";
   const hi = `Aloha, ${first || "there"}!\n\n`;
   if (guide === "Nikki") {
-    // TEMPORARY wording (Oct 31, 2026) — Nikki will adjust her own message.
+    // Nikki's own wording (Oct 31, 2026). Her time always reads "… AM":
+    // "6:15" becomes "6:15 AM"; a time already typed with AM/PM is left alone.
+    const nt = /\b[ap]\.?m\.?$/i.test(t) ? t : `${t} AM`;
     return (
       hi +
-      `This is Nikki with Summit O'ahu. I'll be your guide on your journey around this beautiful island tomorrow. ` +
-      `I will be at your hotel, ${h}, at ${t} tomorrow morning.\n\n` +
+      `This is Nikki from Summit Oahu Tours. I’ll be your tour guide tomorrow.\n` +
+      `I’ll meet you at ${h} at ${nt} for your Circle Island Tour.\n\n` +
       `Cash is preferred for lunch (~$20/person), but they will accept a credit/debit card with a photo ID. ` +
-      `Let me know if you have any other questions, otherwise I will see you in the morning!\n\n` +
+      `Let me know if you have any other questions, otherwise I will see you in the morning!🌴\n\n` +
       `Mahalo!`
     );
   }
