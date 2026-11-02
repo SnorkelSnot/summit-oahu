@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Script from "next/script";
-import JsonLd, { businessSchema } from "@/components/JsonLd";
+import JsonLd, { businessSchema, websiteSchema } from "@/components/JsonLd";
 import { SITE } from "@/lib/site";
 
 const DESCRIPTION =
@@ -54,6 +54,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen">
         <JsonLd data={businessSchema()} />
+        <JsonLd data={websiteSchema()} />
         {children}
         {/* Cookie-free visit counting (Cloudflare Web Analytics). Invisible to
             visitors; loads after the page so it never slows it down. */}

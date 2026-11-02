@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import TourStops from "@/components/TourStops";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import JsonLd, { TRIPS, pageToursSchema } from "@/components/JsonLd";
 
 export const metadata = {
   title: "Private Oahu Tour Itinerary",
@@ -13,6 +14,12 @@ export const metadata = {
 export default function PrivateItineraryPage() {
   return (
     <main className="bg-palm-950">
+      <JsonLd
+        data={pageToursSchema({ name: "Private Oahu Tours", path: "/private-itinerary" }, [
+          TRIPS.privateMercedes(),
+          TRIPS.privateVan(),
+        ])}
+      />
       <Navbar />
       <div className="pt-20">
         <TourStops variant="private" />

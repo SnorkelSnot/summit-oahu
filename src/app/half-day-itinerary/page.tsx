@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import TourStops from "@/components/TourStops";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import JsonLd, { TRIPS, pageToursSchema } from "@/components/JsonLd";
 import {
   HALF_DAY_MAX_SEATS,
   HALF_DAY_PICKUP,
@@ -18,6 +19,7 @@ export const metadata = {
 export default function HalfDayItineraryPage() {
   return (
     <main className="bg-palm-950">
+      <JsonLd data={pageToursSchema({ name: "Half-Day Oahu Tour", path: "/half-day-itinerary" }, [TRIPS.halfDay()])} />
       <Navbar />
       <div className="pt-20">
         <TourStops variant="half-day" />

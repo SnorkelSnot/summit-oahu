@@ -73,21 +73,94 @@ export function businessSchema() {
       },
     ],
     sameAs: [...SITE.social, ...reviewProfiles()],
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "reservations",
+      telephone: SITE.phone,
+      email: SITE.email,
+      availableLanguage: ["English", "Turkish"],
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Oahu tours",
+      itemListElement: ["small-group", "half-day", "private-mercedes", "private-van"].map(
+        (slug) => ({ "@type": "Offer", itemOffered: { "@id": `${SITE.url}/#tour-${slug}` } })
+      ),
+    },
+  };
+}
+
+/** The website itself, tied to the business — lets search engines connect the two. */
+export function websiteSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${SITE.url}/#website`,
+    url: SITE.url,
+    name: SITE.name,
+    alternateName: SITE.alternateNames,
+    inLanguage: "en-US",
+    publisher: { "@id": BUSINESS_ID },
+  };
+}
+
+/**
+ * Details Google and AI tools read for each tour (Nov 2026 pass, from Nikki's
+ * checklist): photos, the tour's own page, where pickup is, when it leaves and
+ * returns, and a per-person or per-tour price. Times are Hawaii time (-10:00,
+ * no daylight saving). schema.org has no "duration" on a trip, so the
+ * departure/arrival times (and the description) carry it.
+ */
+type TripExtra = {
+  slug: string;
+  page: string;
+  images: string[];
+  origins: string[];
+  departureTime?: string;
+  arrivalTime?: string;
+  perPerson: boolean;
+};
+
+const img = (f: string) => `${SITE.url}/images/${f}`;
+
+const LOCALITY: Record<string, string> = {
+  "Waikiki hotels": "Honolulu",
+  "Ko Olina": "Kapolei",
+  "Turtle Bay": "Kahuku",
+};
+
+function place(name: string) {
+  return {
+    "@type": "Place",
+    name,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: LOCALITY[name] || "Honolulu",
+      addressRegion: SITE.region,
+      addressCountry: SITE.country,
+    },
   };
 }
 
 function trip(
   t: (typeof TOURS)[keyof typeof TOURS],
   languages: string[],
+  x: TripExtra,
   stopList: readonly string[] = ITINERARY_STOPS
 ) {
   return {
     "@type": "TouristTrip",
+    "@id": `${SITE.url}/#tour-${x.slug}`,
     name: t.name,
     description: t.description,
+    url: `${SITE.url}${x.page}`,
+    image: x.images.map(img),
     touristType: ["Sightseeing", "Solo travelers", "Couples", "Families"],
     availableLanguage: languages,
     provider: { "@id": BUSINESS_ID },
+    tripOrigin: x.origins.map(place),
+    ...(x.departureTime ? { departureTime: x.departureTime } : {}),
+    ...(x.arrivalTime ? { arrivalTime: x.arrivalTime } : {}),
     itinerary: {
       "@type": "ItemList",
       itemListElement: stopList.map((name, i) => ({
@@ -100,21 +173,82 @@ function trip(
       "@type": "Offer",
       price: t.price,
       priceCurrency: "USD",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: t.price,
+        priceCurrency: "USD",
+        unitText: x.perPerson ? "per person" : "per tour",
+        valueAddedTaxIncluded: false,
+      },
       availability: "https://schema.org/InStock",
       url: `${SITE.url}/book?tour=${t.id}`,
       description: `${t.priceUnit} · ${t.groupSize} · Hawaii GET added at checkout`,
+      seller: { "@id": BUSINESS_ID },
     },
   };
 }
 
+const WAIKIKI = "Waikiki hotels";
+const PRIVATE_ORIGINS = [WAIKIKI, "Ko Olina", "Turtle Bay"];
+
+export const TRIPS = {
+  smallGroup: () =>
+    trip(TOURS.smallGroup, ["en"], {
+      slug: "small-group",
+      page: "/",
+      images: ["tour-smallgroup.jpg", "stop-byodoin.jpg", "stop-halona-blowhole.jpg", "stop-northshore.jpg", "stop-diamondhead.jpg"],
+      origins: [WAIKIKI],
+      departureTime: "06:15:00-10:00",
+      perPerson: true,
+    }),
+  halfDay: () =>
+    trip(TOURS.halfDay, ["en"], {
+      slug: "half-day",
+      page: "/half-day-itinerary",
+      images: ["tour-half-v2.jpg", "stop-pali.jpg", "stop-makapuu.jpg", "stop-leonards.jpg", "stop-waimanalo.jpg"],
+      origins: [WAIKIKI],
+      departureTime: "07:45:00-10:00",
+      arrivalTime: "12:30:00-10:00",
+      perPerson: true,
+    }, HALF_DAY_STOPS),
+  privateMercedes: () =>
+    trip(TOURS.privateMercedes, ["en", "tr"], {
+      slug: "private-mercedes",
+      page: "/private-itinerary",
+      images: ["tour-private-v2.jpg", "stop-byodoin-couple.jpg", "stop-kualoa.jpg", "stop-haleiwa.jpg"],
+      origins: PRIVATE_ORIGINS,
+      perPerson: false,
+    }),
+  privateVan: () =>
+    trip(TOURS.privateVan, ["en", "tr"], {
+      slug: "private-van",
+      page: "/private-itinerary",
+      images: ["tour-van.jpg", "stop-byodoin.jpg", "stop-kualoa.jpg", "stop-dole.jpg"],
+      origins: PRIVATE_ORIGINS,
+      perPerson: false,
+    }),
+};
+
 export function toursSchema() {
   return {
     "@context": "https://schema.org",
+    "@graph": [TRIPS.smallGroup(), TRIPS.halfDay(), TRIPS.privateMercedes(), TRIPS.privateVan()],
+  };
+}
+
+/** One page's own tours (half-day page, private page), plus a breadcrumb. */
+export function pageToursSchema(page: { name: string; path: string }, trips: object[]) {
+  return {
+    "@context": "https://schema.org",
     "@graph": [
-      trip(TOURS.smallGroup, ["en"]),
-      trip(TOURS.halfDay, ["en"], HALF_DAY_STOPS),
-      trip(TOURS.privateMercedes, ["en", "tr"]),
-      trip(TOURS.privateVan, ["en", "tr"]),
+      ...trips,
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE.url },
+          { "@type": "ListItem", position: 2, name: page.name, item: `${SITE.url}${page.path}` },
+        ],
+      },
     ],
   };
 }
