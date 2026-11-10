@@ -1,0 +1,13 @@
+{
+  "name": "Summit Oahu Admin",
+  "short_name": "Summit Admin",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#1a3a1a",
+  "theme_color": "#1a3a1a",
+  "icons": [
+    { "src": "/images/admin-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/images/admin-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

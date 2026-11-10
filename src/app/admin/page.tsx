@@ -25,6 +25,9 @@ export default function AdminPage() {
   const [days, setDays] = useState<DayData[]>([]);
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
+  // true until we've asked the server whether this phone is still signed in
+  const [checking, setChecking] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   // the switch the user just flipped, shown in its new position while it saves
@@ -92,6 +95,61 @@ export default function AdminPage() {
     if (authenticated) fetchDays();
   }, [fetchDays, authenticated]);
 
+  // Still signed in from last time? (30-day pass, Nov 10, 2026)
+  useEffect(() => {
+    fetch("/api/admin/session", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (d?.signedIn) setAuthenticated(true); })
+      .catch(() => {})
+      .finally(() => setChecking(false));
+  }, []);
+
+  // Coming back to the app (or the tab) always shows fresh bookings.
+  useEffect(() => {
+    if (!authenticated) return;
+    const onShow = () => { if (document.visibilityState === "visible") fetchDays(); };
+    document.addEventListener("visibilitychange", onShow);
+    window.addEventListener("pageshow", onShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onShow);
+      window.removeEventListener("pageshow", onShow);
+    };
+  }, [authenticated, fetchDays]);
+
+  async function refresh() {
+    setRefreshing(true);
+    await fetchDays();
+    setRefreshing(false);
+  }
+
+  // Jump to a date (Today / Tomorrow buttons) — dates in Hawaii time.
+  function hawaiiDate(daysAhead: number): string {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Honolulu" }).format(
+      new Date(Date.now() + daysAhead * 86400000)
+    );
+  }
+  function jumpTo(dateStr: string) {
+    const [y, m] = dateStr.split("-").map(Number);
+    setCurrentMonth({ year: y, month: m - 1 });
+    setSelectedDay(
+      days.find((d) => d.date === dateStr) || {
+        date: dateStr,
+        privateBooked: false,
+        vanSeatsTaken: 0,
+        vanSeatsTotal: 13,
+        blocked: false,
+        bookings: [],
+      } as DayData
+    );
+    setTimeout(() => document.getElementById("day-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  async function signOut() {
+    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
+    setPassword("");
+    setAuthenticated(false);
+  }
+
   // A light tap on every button and link on this page (Nov 9, 2026 — Trey):
   // calendar days, month arrows, block toggles, the phone menu, sign in/out.
   // Listens once for the whole page, so new buttons get it automatically.
@@ -106,7 +164,11 @@ export default function AdminPage() {
     return () => document.removeEventListener("click", onTap, true);
   }, []);
 
-  // Simple password gate (replace with proper auth in production)
+  if (checking) {
+    return <div className="min-h-screen bg-palm-950" aria-busy="true" />;
+  }
+
+  // Password gate — checked on the server; signing in keeps this phone signed in for 30 days.
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-sand-100 flex items-center justify-center p-6">
@@ -122,11 +184,11 @@ export default function AdminPage() {
               e.preventDefault();
               // Checked on the SERVER now (Oct 28, 2026); the old check lived
               // in this file, readable by anyone who opened the page source.
-              const now = new Date();
-              const res = await fetch(
-                `/api/admin/availability?year=${now.getFullYear()}&month=${now.getMonth()}`,
-                { headers: { "x-admin-password": password }, cache: "no-store" }
-              );
+              const res = await fetch("/api/admin/session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password }),
+              });
               if (res.ok) {
                 setAuthError("");
                 setAuthenticated(true);
@@ -175,18 +237,43 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-sand-100">
       {/* Header */}
-      <header className="bg-palm-950 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header
+        className="bg-palm-950 px-6 pb-4"
+        style={{ paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))" }}
+      >
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-xl font-bold text-sand-50">
               Summit O&apos;ahu <span className="text-gold-400">Admin</span>
             </h1>
           </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={refresh}
+              disabled={refreshing}
+              aria-label="Refresh bookings"
+              className="text-sand-300 text-sm hover:text-sand-100 disabled:opacity-50"
+            >
+              {refreshing ? "Refreshing…" : "↻ Refresh"}
+            </button>
+            <button onClick={signOut} className="text-sand-400 text-sm hover:text-sand-200">
+              Sign Out
+            </button>
+          </div>
+        </div>
+        {/* One tap to today's or tomorrow's guests (Nov 10, 2026) */}
+        <div className="max-w-6xl mx-auto mt-3 flex gap-2">
           <button
-            onClick={() => setAuthenticated(false)}
-            className="text-sand-400 text-sm hover:text-sand-200"
+            onClick={() => jumpTo(hawaiiDate(0))}
+            className="flex-1 sm:flex-none rounded-lg bg-palm-800 text-sand-50 text-sm font-semibold px-4 py-2 hover:bg-palm-700"
           >
-            Sign Out
+            Today
+          </button>
+          <button
+            onClick={() => jumpTo(hawaiiDate(1))}
+            className="flex-1 sm:flex-none rounded-lg bg-gold-400 text-palm-950 text-sm font-semibold px-4 py-2 hover:bg-gold-300"
+          >
+            Tomorrow
           </button>
         </div>
       </header>
@@ -302,7 +389,7 @@ export default function AdminPage() {
 
           {/* Day Detail Panel */}
           <div>
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
+            <div id="day-panel" className="bg-white rounded-2xl shadow-lg p-6 sticky top-6 scroll-mt-4">
               {selectedDay ? (
                 <>
                   <h3 className="font-display text-lg font-semibold text-palm-900 mb-4">

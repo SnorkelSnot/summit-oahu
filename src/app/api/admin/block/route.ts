@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setBlock } from "@/lib/sheets";
+import { isAdmin } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,7 @@ export const dynamic = "force-dynamic";
  * block is cleared on its own, so nothing is lifted by accident.
  */
 export async function POST(request: NextRequest) {
-  const expected = process.env.ADMIN_PASSWORD || "summit2024";
-  if ((request.headers.get("x-admin-password") || "") !== expected) {
+  if (!isAdmin(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   let body: any;

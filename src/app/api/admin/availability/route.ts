@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMonthAvailability } from "@/lib/availability";
+import { isAdmin } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,10 +14,8 @@ export const revalidate = 0;
  * server. Set ADMIN_PASSWORD in Netlify (secret) to change it; until then the
  * old password still works so nothing breaks on deploy.
  */
-function passwordOk(req: NextRequest): boolean {
-  const expected = process.env.ADMIN_PASSWORD || "summit2024";
-  return (req.headers.get("x-admin-password") || "") === expected;
-}
+// Password header OR the 30-day signed-in pass (Nov 10, 2026) — see lib/adminAuth.
+const passwordOk = isAdmin;
 
 export async function GET(request: NextRequest) {
   if (!passwordOk(request)) {
