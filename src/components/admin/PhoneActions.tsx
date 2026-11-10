@@ -131,21 +131,22 @@ export default function PhoneActions({ phone, name, hotel }: { phone: string; na
             <span className="block text-[11px] font-semibold text-lava-500 uppercase tracking-wide">
               Guide
             </span>
-            <span className="mt-1 flex rounded-md ring-1 ring-sand-300 overflow-hidden">
-              {(["Trey", "Nikki"] as Guide[]).map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGuide(g)}
-                  aria-pressed={guide === g}
-                  className={`flex-1 py-1 text-sm font-semibold ${
-                    guide === g ? "bg-palm-700 text-white" : "bg-white text-palm-800 hover:bg-sand-100"
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-            </span>
+            {/* A real on/off switch (Nov 10, 2026) so an iPhone gives its tick:
+                off = Trey, on = Nikki. */}
+            <label className="mt-1 flex items-center justify-between gap-2 text-sm font-semibold cursor-pointer">
+              <span className={guide === "Trey" ? "text-palm-800" : "text-lava-400"}>Trey</span>
+              <input
+                type="checkbox"
+                {...({ switch: "" } as Record<string, string>)}
+                role="switch"
+                aria-label="Guide: on for Nikki, off for Trey"
+                aria-checked={guide === "Nikki"}
+                checked={guide === "Nikki"}
+                onChange={(e) => setGuide(e.target.checked ? "Nikki" : "Trey")}
+                style={{ accentColor: "#2f6b4f", width: "2.6rem", height: "1.5rem" }}
+              />
+              <span className={guide === "Nikki" ? "text-palm-800" : "text-lava-400"}>Nikki</span>
+            </label>
           </span>
           <span className="block px-3 pt-1 pb-1">
             <label className="block text-[11px] font-semibold text-lava-500 uppercase tracking-wide">

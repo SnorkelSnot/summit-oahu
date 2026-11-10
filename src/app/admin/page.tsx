@@ -27,6 +27,8 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  // the switch the user just flipped, shown in its new position while it saves
+  const [pendingBlock, setPendingBlock] = useState<{ key: string; on: boolean } | null>(null);
   const [blockBusy, setBlockBusy] = useState(false);
   const [blockMsg, setBlockMsg] = useState("");
 
@@ -82,6 +84,7 @@ export default function AdminPage() {
       haptic("error");
     } finally {
       setBlockBusy(false);
+      setPendingBlock(null);
     }
   }
 
@@ -95,7 +98,7 @@ export default function AdminPage() {
   useEffect(() => {
     const onTap = (e: MouseEvent) => {
       const el = (e.target as HTMLElement | null)?.closest?.(
-        'button:not([disabled]), a[href], [role="menuitem"], input[type="submit"]'
+        'button:not([disabled]), a[href], [role="menuitem"], input[type="submit"], input[type="checkbox"]:not([disabled])'
       );
       if (el && !(el as HTMLElement).closest('label[aria-hidden="true"]')) haptic("tap");
     };
@@ -370,24 +373,38 @@ export default function AdminPage() {
                           Block this date
                         </div>
                         {rows.map(({ v, label }) => {
-                          const on = blocks.includes(v);
+                          // A REAL on/off switch (Nov 10, 2026): since iOS 26.5 an
+                          // iPhone only gives its "tick" when you flip a real switch
+                          // yourself, so these are native switches, not buttons.
+                          const saved = blocks.includes(v);
+                          const on = pendingBlock?.key === `${selectedDay.date}:${v}` ? pendingBlock.on : saved;
                           return (
-                            <button
+                            <label
                               key={v}
-                              type="button"
-                              disabled={blockBusy}
-                              onClick={() => changeBlock(selectedDay.date, v, !on)}
-                              className={`w-full py-2 px-3 rounded-lg text-sm font-semibold flex justify-between items-center transition-colors disabled:opacity-50 ${
-                                on
-                                  ? "bg-red-100 text-red-700 hover:bg-red-200"
-                                  : "bg-sand-100 text-palm-800 hover:bg-sand-200"
-                              }`}
+                              className={`w-full py-2 px-3 rounded-lg text-sm font-semibold flex justify-between items-center gap-3 transition-colors cursor-pointer ${
+                                blockBusy ? "opacity-60" : ""
+                              } ${on ? "bg-red-100 text-red-700" : "bg-sand-100 text-palm-800"}`}
                             >
-                              <span>{label}</span>
-                              <span className="text-xs font-medium">
-                                {on ? "Blocked · tap to unblock" : "Open · tap to block"}
+                              <span className="flex flex-col">
+                                <span>{label}</span>
+                                <span className="text-xs font-medium">{on ? "Blocked" : "Open"}</span>
                               </span>
-                            </button>
+                              <input
+                                type="checkbox"
+                                {...({ switch: "" } as Record<string, string>)}
+                                role="switch"
+                                aria-checked={on}
+                                aria-label={`Block ${label.toLowerCase()}`}
+                                checked={on}
+                                disabled={blockBusy}
+                                onChange={(e) => {
+                                  setPendingBlock({ key: `${selectedDay.date}:${v}`, on: e.target.checked });
+                                  changeBlock(selectedDay.date, v, e.target.checked);
+                                }}
+                                className="admin-switch"
+                                style={{ accentColor: "#dc2626", width: "2.6rem", height: "1.5rem" }}
+                              />
+                            </label>
                           );
                         })}
                         {blockMsg && (
