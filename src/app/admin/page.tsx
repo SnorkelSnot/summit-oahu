@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import PhoneActions from "@/components/admin/PhoneActions";
+import { haptic } from "@/lib/haptics";
 
 type DayData = {
   date: string;
@@ -74,9 +75,11 @@ export default function AdminPage() {
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const what = vehicle === "ALL" ? "Whole day" : vehicle === "van" ? "Van" : "Mercedes";
       setBlockMsg(`${what} ${block ? "blocked" : "unblocked"} ✓`);
+      haptic("success");
       await fetchDays();
     } catch (e: any) {
       setBlockMsg(`Didn't save: ${e.message}`);
+      haptic("error");
     } finally {
       setBlockBusy(false);
     }
@@ -85,6 +88,20 @@ export default function AdminPage() {
   useEffect(() => {
     if (authenticated) fetchDays();
   }, [fetchDays, authenticated]);
+
+  // A light tap on every button and link on this page (Nov 9, 2026 — Trey):
+  // calendar days, month arrows, block toggles, the phone menu, sign in/out.
+  // Listens once for the whole page, so new buttons get it automatically.
+  useEffect(() => {
+    const onTap = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.(
+        'button:not([disabled]), a[href], [role="menuitem"], input[type="submit"]'
+      );
+      if (el && !(el as HTMLElement).closest('label[aria-hidden="true"]')) haptic("tap");
+    };
+    document.addEventListener("click", onTap, true);
+    return () => document.removeEventListener("click", onTap, true);
+  }, []);
 
   // Simple password gate (replace with proper auth in production)
   if (!authenticated) {
@@ -110,8 +127,10 @@ export default function AdminPage() {
               if (res.ok) {
                 setAuthError("");
                 setAuthenticated(true);
+                haptic("success");
               } else {
                 setAuthError("Incorrect password");
+                haptic("error");
               }
             }}
           >
