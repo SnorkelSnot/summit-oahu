@@ -111,3 +111,10 @@ img {
 .calendar-day--disabled {
   @apply text-lava-300 cursor-not-allowed;
 }
+
+/* Admin haptics (Nov 12, 2026): the invisible switch over each admin button
+   is only for touch screens. With a mouse or trackpad, clicks and hover go
+   straight to the real button underneath. */
+@media (hover: hover) and (pointer: fine) {
+  .tick-overlay { pointer-events: none; }
+}

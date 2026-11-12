@@ -54,6 +54,9 @@ export function haptic(kind: HapticKind = "tap") {
       return;
     }
     if (!isIOS()) return;
+    // iPhone taps already tick through the invisible switch on each button
+    // (components/admin/Tick.tsx), so only the saved / didn't-save patterns run here.
+    if (kind === "tap") return;
     iosTick();
     if (kind === "success") setTimeout(iosTick, 110);
     if (kind === "error") { setTimeout(iosTick, 120); setTimeout(iosTick, 240); }

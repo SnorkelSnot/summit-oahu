@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import PhoneActions from "@/components/admin/PhoneActions";
 import { haptic } from "@/lib/haptics";
+import MonthNumbers from "@/components/admin/MonthNumbers";
+import Tick from "@/components/admin/Tick";
 
 type DayData = {
   date: string;
@@ -28,6 +30,8 @@ export default function AdminPage() {
   // true until we've asked the server whether this phone is still signed in
   const [checking, setChecking] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Calendar (seats, blocks, guests) or Numbers (Nehir's month sheet) — Nov 12, 2026
+  const [view, setView] = useState<"calendar" | "numbers">("calendar");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   // the switch the user just flipped, shown in its new position while it saves
@@ -129,6 +133,7 @@ export default function AdminPage() {
     );
   }
   function jumpTo(dateStr: string) {
+    setView("calendar");
     const [y, m] = dateStr.split("-").map(Number);
     setCurrentMonth({ year: y, month: m - 1 });
     setSelectedDay(
@@ -156,7 +161,7 @@ export default function AdminPage() {
   useEffect(() => {
     const onTap = (e: MouseEvent) => {
       const el = (e.target as HTMLElement | null)?.closest?.(
-        'button:not([disabled]), a[href], [role="menuitem"], input[type="submit"], input[type="checkbox"]:not([disabled])'
+        'button:not([disabled]), a[href], [role="menuitem"], input[type="submit"], input[type="checkbox"]:not([disabled]):not(.tick-overlay)'
       );
       if (el && !(el as HTMLElement).closest('label[aria-hidden="true"]')) haptic("tap");
     };
@@ -209,9 +214,11 @@ export default function AdminPage() {
             {authError && (
               <p className="text-sm text-red-600 mb-3">{authError}</p>
             )}
-            <button type="submit" className="w-full btn-primary">
-              Sign In
-            </button>
+            <Tick block>
+              <button type="submit" className="w-full btn-primary">
+                Sign In
+              </button>
+            </Tick>
           </form>
         </div>
       </div>
@@ -248,42 +255,85 @@ export default function AdminPage() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={refresh}
-              disabled={refreshing}
-              aria-label="Refresh bookings"
-              className="text-sand-300 text-sm hover:text-sand-100 disabled:opacity-50"
-            >
-              {refreshing ? "Refreshing…" : "↻ Refresh"}
-            </button>
-            <button onClick={signOut} className="text-sand-400 text-sm hover:text-sand-200">
-              Sign Out
-            </button>
+            <Tick>
+              <button
+                onClick={refresh}
+                disabled={refreshing}
+                aria-label="Refresh bookings"
+                className="text-sand-300 text-sm hover:text-sand-100 disabled:opacity-50"
+              >
+                {refreshing ? "Refreshing…" : "↻ Refresh"}
+              </button>
+            </Tick>
+            <Tick>
+              <button onClick={signOut} className="text-sand-400 text-sm hover:text-sand-200">
+                Sign Out
+              </button>
+            </Tick>
           </div>
         </div>
         {/* One tap to today's or tomorrow's guests (Nov 10, 2026) */}
         <div className="max-w-6xl mx-auto mt-3 flex gap-2">
-          <button
-            onClick={() => jumpTo(hawaiiDate(0))}
-            className="flex-1 sm:flex-none rounded-lg bg-palm-800 text-sand-50 text-sm font-semibold px-4 py-2 hover:bg-palm-700"
-          >
-            Today
-          </button>
-          <button
-            onClick={() => jumpTo(hawaiiDate(1))}
-            className="flex-1 sm:flex-none rounded-lg bg-gold-400 text-palm-950 text-sm font-semibold px-4 py-2 hover:bg-gold-300"
-          >
-            Tomorrow
-          </button>
+          <Tick block className="flex-1 sm:flex-none">
+            <button
+              onClick={() => jumpTo(hawaiiDate(0))}
+              className="w-full rounded-lg bg-palm-800 text-sand-50 text-sm font-semibold px-4 py-2 hover:bg-palm-700"
+            >
+              Today
+            </button>
+          </Tick>
+          <Tick block className="flex-1 sm:flex-none">
+            <button
+              onClick={() => jumpTo(hawaiiDate(1))}
+              className="w-full rounded-lg bg-gold-400 text-palm-950 text-sm font-semibold px-4 py-2 hover:bg-gold-300"
+            >
+              Tomorrow
+            </button>
+          </Tick>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="flex rounded-xl bg-sand-200 p-1 mb-6 max-w-xs" role="tablist" aria-label="Admin view">
+          {(["calendar", "numbers"] as const).map((v) => (
+            <Tick key={v} block className="flex-1">
+              <button
+                role="tab"
+                aria-selected={view === v}
+                onClick={() => setView(v)}
+                className={`w-full rounded-lg py-2 text-sm font-semibold capitalize transition-colors ${
+                  view === v ? "bg-white text-palm-900 shadow" : "text-palm-700 hover:text-palm-900"
+                }`}
+              >
+                {v}
+              </button>
+            </Tick>
+          ))}
+        </div>
+
+        {view === "numbers" ? (
+          <MonthNumbers
+            days={days}
+            monthName={monthName}
+            loading={refreshing}
+            onPrev={() =>
+              setCurrentMonth((prev) =>
+                prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 }
+              )
+            }
+            onNext={() =>
+              setCurrentMonth((prev) =>
+                prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 }
+              )
+            }
+          />
+        ) : (
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Calendar */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-6">
+                <Tick>
                 <button
                   onClick={() =>
                     setCurrentMonth((prev) =>
@@ -296,9 +346,11 @@ export default function AdminPage() {
                 >
                   ←
                 </button>
+                </Tick>
                 <h2 className="font-display text-xl font-semibold text-palm-900">
                   {monthName}
                 </h2>
+                <Tick>
                 <button
                   onClick={() =>
                     setCurrentMonth((prev) =>
@@ -311,6 +363,7 @@ export default function AdminPage() {
                 >
                   →
                 </button>
+                </Tick>
               </div>
 
               <div className="grid grid-cols-7 gap-2 mb-2">
@@ -342,8 +395,8 @@ export default function AdminPage() {
                   const isBlocked = data?.blocked;
 
                   return (
+                    <Tick key={day} block>
                     <button
-                      key={day}
                       onClick={() => {
                         const dateStr = `${currentMonth.year}-${String(currentMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                         const d = data || {
@@ -356,7 +409,7 @@ export default function AdminPage() {
                         };
                         setSelectedDay(d);
                       }}
-                      className={`p-2 rounded-lg text-sm text-center transition-all hover:shadow-md ${
+                      className={`w-full h-full p-2 rounded-lg text-sm text-center transition-all hover:shadow-md ${
                         isBlocked
                           ? "bg-red-100 text-red-700"
                           : hasBookings
@@ -381,6 +434,7 @@ export default function AdminPage() {
                         </div>
                       )}
                     </button>
+                    </Tick>
                   );
                 })}
               </div>
@@ -559,6 +613,7 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

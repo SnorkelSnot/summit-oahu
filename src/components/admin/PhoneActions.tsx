@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Tick from "./Tick";
 
 /**
  * Tap a guest's phone number on /admin -> Text / WhatsApp / Call / Copy
@@ -113,15 +114,17 @@ export default function PhoneActions({ phone, name, hotel }: { phone: string; na
 
   return (
     <span ref={ref} className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="text-palm-700 font-semibold underline decoration-dotted underline-offset-2 hover:text-palm-900"
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        {plus}
-      </button>
+      <Tick>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="text-palm-700 font-semibold underline decoration-dotted underline-offset-2 hover:text-palm-900"
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          {plus}
+        </button>
+      </Tick>
       {open && (
         <span
           role="menu"
@@ -160,14 +163,22 @@ export default function PhoneActions({ phone, name, hotel }: { phone: string; na
             />
           </span>
           {/* "?&body=" works on both iPhone and Android Messages. */}
-          <a role="menuitem" className={item} href={`sms:${plus}?&body=${msg}`}>💬 Text (SMS)</a>
-          <a role="menuitem" className={item} href={`https://wa.me/${intl}?text=${msg}`} target="_blank" rel="noopener noreferrer">
-            🟢 WhatsApp
-          </a>
-          <a role="menuitem" className={item} href={`tel:${plus}`}>📞 Call</a>
-          <button role="menuitem" type="button" className={item} onClick={copy}>
-            {copied ? "✓ Copied" : "📋 Copy number"}
-          </button>
+          <Tick block>
+            <a role="menuitem" className={item} href={`sms:${plus}?&body=${msg}`}>💬 Text (SMS)</a>
+          </Tick>
+          <Tick block>
+            <a role="menuitem" className={item} href={`https://wa.me/${intl}?text=${msg}`} target="_blank" rel="noopener noreferrer">
+              🟢 WhatsApp
+            </a>
+          </Tick>
+          <Tick block>
+            <a role="menuitem" className={item} href={`tel:${plus}`}>📞 Call</a>
+          </Tick>
+          <Tick block>
+            <button role="menuitem" type="button" className={item} onClick={copy}>
+              {copied ? "✓ Copied" : "📋 Copy number"}
+            </button>
+          </Tick>
         </span>
       )}
     </span>
